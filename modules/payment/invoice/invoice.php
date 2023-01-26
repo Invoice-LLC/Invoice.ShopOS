@@ -6,6 +6,7 @@ require "InvoiceSDK/common/SETTINGS.php";
 require "InvoiceSDK/common/ORDER.php";
 require "InvoiceSDK/CREATE_TERMINAL.php";
 require "InvoiceSDK/CREATE_PAYMENT.php";
+require "InvoiceSDK/GET_TERMINAL.php";
 
 class invoice
 {
@@ -22,7 +23,8 @@ class invoice
     public $default_terminal_name;
     public $order_status;
 
-    public function __construct(){
+    public function __construct()
+    {
         global $order;
         $this->order = &$order;
 
@@ -31,7 +33,8 @@ class invoice
         $this->default_terminal_name = MODULE_PAYMENT_DEFAULT_TERMINAL_NAME;
     }
 
-    function update_status() {
+    function update_status()
+    {
         global $order;
 
         return true;
@@ -44,27 +47,25 @@ class invoice
 
     function selection()
     {
-        if (isset($_SESSION[$this->name]))
-        {
-            $order_id = substr($_SESSION[$this->name], strpos($_SESSION[$this->name], '-')+1);
+        if (isset($_SESSION[$this->name])) {
+            $order_id = substr($_SESSION[$this->name], strpos($_SESSION[$this->name], '-') + 1);
             $check_query = os_db_query('select orders_id from ' . TABLE_ORDERS_STATUS_HISTORY . ' where orders_id = "' . (int)$order_id . '" limit 1');
-            if (os_db_num_rows($check_query) < 1)
-            {
-                os_db_query('DELETE FROM '.TABLE_ORDERS.' WHERE orders_id = "'.(int)$order_id.'"');
-                os_db_query('DELETE FROM '.TABLE_ORDERS_TOTAL.' WHERE orders_id = "'.(int)$order_id.'"');
-                os_db_query('DELETE FROM '.TABLE_ORDERS_STATUS_HISTORY.' WHERE orders_id = "'.(int)$order_id.'"');
-                os_db_query('DELETE FROM '.TABLE_ORDERS_PRODUCTS.' WHERE orders_id = "'.(int)$order_id.'"');
-                os_db_query('DELETE FROM '.TABLE_ORDERS_PRODUCTS_ATTRIBUTES.' WHERE orders_id = "'.(int)$order_id.'"');
-                os_db_query('DELETE FROM '.TABLE_ORDERS_PRODUCTS_DOWNLOAD.' WHERE orders_id = "'.(int)$order_id.'"');
+            if (os_db_num_rows($check_query) < 1) {
+                os_db_query('DELETE FROM ' . TABLE_ORDERS . ' WHERE orders_id = "' . (int)$order_id . '"');
+                os_db_query('DELETE FROM ' . TABLE_ORDERS_TOTAL . ' WHERE orders_id = "' . (int)$order_id . '"');
+                os_db_query('DELETE FROM ' . TABLE_ORDERS_STATUS_HISTORY . ' WHERE orders_id = "' . (int)$order_id . '"');
+                os_db_query('DELETE FROM ' . TABLE_ORDERS_PRODUCTS . ' WHERE orders_id = "' . (int)$order_id . '"');
+                os_db_query('DELETE FROM ' . TABLE_ORDERS_PRODUCTS_ATTRIBUTES . ' WHERE orders_id = "' . (int)$order_id . '"');
+                os_db_query('DELETE FROM ' . TABLE_ORDERS_PRODUCTS_DOWNLOAD . ' WHERE orders_id = "' . (int)$order_id . '"');
                 unset($_SESSION[$this->name]);
             }
         }
-        if (os_not_null($this->icon)) $icon = os_image(http_path('payment').$this->code.'/'.$this->icon, $this->title);
+        if (os_not_null($this->icon)) $icon = os_image(http_path('payment') . $this->code . '/' . $this->icon, $this->title);
         return array(
             'id' => $this->code,
             'icon' => $this->icon,
             'module' => $this->title,
-            'title'=>$this->title
+            'title' => $this->title
         );
     }
 
@@ -75,7 +76,8 @@ class invoice
         if (!isset($_SESSION['cartID'])) $_SESSION['cartID'] = $_SESSION['cart']->generate_cart_id();
     }
 
-    function confirmation() {
+    function confirmation()
+    {
         global $cartID, $cart_id, $customer_id, $languages_id, $order, $order_total_modules;
         if (isset($_SESSION['cartID'])) {
             $insert_order = false;
@@ -87,7 +89,7 @@ class invoice
                     ($curr['currency'] != $order->info['currency'])
                     ||
                     ($cartID != substr($cart_id, 0, strlen($cartID)))
-                ){
+                ) {
                     $check_query = os_db_query('select orders_id from ' . TABLE_ORDERS_STATUS_HISTORY . ' where orders_id = "' . (int)$order_id . '" limit 1');
                     if (os_db_num_rows($check_query) < 1) {
                         os_db_query('delete from ' . TABLE_ORDERS . ' where orders_id = "' . (int)$order_id . '"');
@@ -106,10 +108,9 @@ class invoice
                     reset($order_total_modules->modules);
                     while (list(, $value) = each($order_total_modules->modules)) {
                         $class = substr($value, 0, strrpos($value, '.'));
-                        if($GLOBALS[$class]->enabled)
-                            for($i=0, $n=sizeof($GLOBALS[$class]->output); $i<$n; $i++)
-                                if
-                                (
+                        if ($GLOBALS[$class]->enabled)
+                            for ($i = 0, $n = sizeof($GLOBALS[$class]->output); $i < $n; $i++)
+                                if (
                                     os_not_null($GLOBALS[$class]->output[$i]['title'])
                                     &&
                                     os_not_null($GLOBALS[$class]->output[$i]['text'])
@@ -183,7 +184,7 @@ class invoice
                 );
                 os_db_perform(TABLE_ORDERS, $sql_data_array);
                 $insert_id = os_db_insert_id();
-                for ($i=0, $n=sizeof($order_totals); $i<$n; $i++) {
+                for ($i = 0, $n = sizeof($order_totals); $i < $n; $i++) {
                     $sql_data_array = array(
                         'orders_id' => $insert_id,
                         'title' => $order_totals[$i]['title'],
@@ -194,7 +195,7 @@ class invoice
                     );
                     os_db_perform(TABLE_ORDERS_TOTAL, $sql_data_array);
                 }
-                for ($i=0, $n=sizeof($order->products); $i<$n; $i++) {
+                for ($i = 0, $n = sizeof($order->products); $i < $n; $i++) {
                     $sql_data_array = array(
                         'orders_id' => $insert_id,
                         'products_id' => os_get_prid($order->products[$i]['id']),
@@ -210,7 +211,7 @@ class invoice
                     $attributes_exist = '0';
                     if (isset($order->products[$i]['attributes'])) {
                         $attributes_exist = '1';
-                        for ($j=0, $n2=sizeof($order->products[$i]['attributes']); $j<$n2; $j++) {
+                        for ($j = 0, $n2 = sizeof($order->products[$i]['attributes']); $j < $n2; $j++) {
                             if (DOWNLOAD_ENABLED == 'true') {
                                 $attributes_query = "SELECT
                   popt.products_options_name,poval.products_options_values_name, pa.options_values_price, pa.price_prefix, pad.products_attributes_maxdays, pad.products_attributes_maxcount , pad.products_attributes_filename
@@ -239,12 +240,12 @@ class invoice
                   and popt.language_id = '" . $_SESSION['languages_id'] . "'
                   and poval.language_id = '" . $_SESSION['languages_id'] . "'");
                             }
-                            os_db_query("UPDATE ".TABLE_PRODUCTS_ATTRIBUTES." set
-                attributes_stock=attributes_stock - '".$order->products[$i]['qty']."'
+                            os_db_query("UPDATE " . TABLE_PRODUCTS_ATTRIBUTES . " set
+                attributes_stock=attributes_stock - '" . $order->products[$i]['qty'] . "'
               where
-                products_id='".$order->products[$i]['id']."'
-                and options_values_id='".$order->products[$i]['attributes'][$j]['value_id']."'
-                and options_id='".$order->products[$i]['attributes'][$j]['option_id']."'");
+                products_id='" . $order->products[$i]['id'] . "'
+                and options_values_id='" . $order->products[$i]['attributes'][$j]['value_id'] . "'
+                and options_id='" . $order->products[$i]['attributes'][$j]['option_id'] . "'");
                             $attributes_values = os_db_fetch_array($attributes);
                             $sql_data_array = array(
                                 'orders_id' => $insert_id,
@@ -275,26 +276,24 @@ class invoice
         return array('title' => $this->description);
     }
 
-    public function process_button(){
-        global $currencies, $currency, $osPrice,$insert_id;
+    public function process_button()
+    {
+        global $currencies, $currency, $osPrice, $insert_id;
         $last_order_id = os_db_query("SELECT MAX(orders_id) AS max FROM " . TABLE_ORDERS);
         $id = os_db_fetch_array($last_order_id);
         $id = $id['max']++;
         $amount = number_format($this->order->info['total'], 2, '.', '');
-        $url = htmlspecialchars($_SERVER['SERVER_NAME']);
 
         $tid = $this->getTerminal();
 
-        $invoice_order = new INVOICE_ORDER($amount);
-        $invoice_order->id = $id;
+        $request = new CREATE_PAYMENT();
+        $request->order = $this->getOrder($amount, $id);
+        $request->settings = $this->getSettings($tid);
+        $request->receipt = $this->getReceipt();
 
-        $settings = new SETTINGS($tid);
-        $settings->success_url = $url;
-
-        $request = new CREATE_PAYMENT($invoice_order, $settings, array());
         $response = (new RestClient($this->login, $this->api_key))->CreatePayment($request);
 
-        if($response == null or isset($response->error)) return '<h1>Payment error</h1>';
+        if ($response == null or isset($response->error)) return '<h1>Payment error</h1>';
 
         $payment_url = $response->payment_url;
 
@@ -303,18 +302,56 @@ class invoice
         );
         $formdata = $arg;
 
-        foreach ($formdata as $field => $value){
-            $this->form .= os_draw_hidden_field($field,$value);
+        foreach ($formdata as $field => $value) {
+            $this->form .= os_draw_hidden_field($field, $value);
         }
 
         $sql_data_array = array(
             'orders_status' => 2,
         );
 
-        os_db_perform(DB_PREFIX.'orders', $sql_data_array, 'update', "orders_id='".(int)$id."'");
+        os_db_perform(DB_PREFIX . 'orders', $sql_data_array, 'update', "orders_id='" . (int)$id . "'");
         $_SESSION['invoice_order_id'] = $id;
 
         return $this->form;
+    }
+
+    /**
+     * @return INVOICE_ORDER
+     */
+    function getOrder($amount, $id)
+    {
+        $order = new INVOICE_ORDER();
+        $order->amount = $amount;
+        $order->id = "$id" . "-" . md5($amount);
+        $order->currency = "RUB";
+
+        return $order;
+    }
+
+    /**
+     * @return SETTINGS
+     */
+    function getSettings($terminal)
+    {
+        $url = ((!empty($_SERVER['HTTPS'])) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+
+        $settings = new SETTINGS();
+        $settings->terminal_id = $terminal;
+        $settings->success_url = $url;
+        $settings->fail_url = $url;
+
+        return $settings;
+    }
+
+    /**
+     * @return ITEM
+     */
+    function getReceipt()
+    {
+        $receipt = array();
+
+        return $receipt;
     }
 
     public function before_process()
@@ -323,7 +360,7 @@ class invoice
     }
     public function after_process()
     {
-        $order_id = $_SESSION['invoice_order_id']+1;
+        $order_id = $_SESSION['invoice_order_id'] + 1;
         os_db_query('delete from ' . TABLE_ORDERS . ' where orders_id = "' . (int)$order_id . '"');
         os_db_query('delete from ' . TABLE_ORDERS_TOTAL . ' where orders_id = "' . (int)$order_id . '"');
         os_db_query('delete from ' . TABLE_ORDERS_STATUS_HISTORY . ' where orders_id = "' . (int)$order_id . '"');
@@ -337,8 +374,7 @@ class invoice
     }
     public function check()
     {
-        if (!isset($this->_check))
-        {
+        if (!isset($this->_check)) {
             $check_query = os_db_query("select configuration_value from " . TABLE_CONFIGURATION . " where configuration_key = 'MODULE_PAYMENT_INVOICE_STATUS'");
             $this->_check = os_db_num_rows($check_query);
         }
@@ -367,18 +403,25 @@ class invoice
         );
     }
 
-    public function getTerminal() {
-        if(!file_exists('invoice_tid')) file_put_contents('invoice_tid', '');
+    public function getTerminal()
+    {
+        if (!file_exists('invoice_tid')) file_put_contents('invoice_tid', '');
         $tid = file_get_contents('invoice_tid');
+        $terminal = new GET_TERMINAL();
+        $terminal->alias =  $tid;
+        $info = (new RestClient($this->login, $this->api_key))->GetTerminal($terminal);
 
-        if($tid == null and empty($tid)) {
-            $request = new CREATE_TERMINAL($this->default_terminal_name);
+        if ($tid == null or empty($tid) || $info->id == null || $info->id != $terminal->alias) {
+            $request = new CREATE_TERMINAL();
+            $request->name = $this->default_terminal_name;
+            $request->type = "dynamical";
+            $request->description = "ShopOS Terminal";
+            $request->defaultPrice = 0;
             $response = (new RestClient($this->login, $this->api_key))->CreateTerminal($request);
 
-            if($response == null or empty($response->error)) throw new Exception('Terminal error');
+            if ($response == null or empty($response->error)) throw new Exception('Terminal error');
 
             $tid = $response->id;
-
             file_put_contents('invoice_tid', $tid);
         }
 
